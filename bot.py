@@ -26,6 +26,16 @@ When the user asks a question:
 5. If you truly can't find it, say so honestly — never make up facts.
 
 Keep answers clear and concise.
+If the user explicitly asks for a chart, graph, or visualization:
+- Provide the normal answer first.
+- Then provide the chart information in this exact format:
+CHART_DATA:
+type: bar
+labels: label1, label2, label3
+values: value1, value2, value3
+- Only create chart data from information found on the fetched page.
+- Never invent numerical values.
+- If suitable numerical data is not available, say that a chart cannot be created from the available information.
 
 Available pages:
 {build_menu()}
@@ -64,9 +74,33 @@ def _log(title, text):
 
 
 # ── Piece 3: the agentic loop ──
-def answer_question(question, max_steps=5):
-    contents = [types.Content(role="user", parts=[types.Part(text=question)])]
+def answer_question(question, history=None, max_steps=5):
+    contents = []
 
+    # Add previous conversation
+    if history:
+        for item in history:
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part(text=item["question"])]
+                )
+            )
+
+            contents.append(
+                types.Content(
+                    role="model",
+                    parts=[types.Part(text=item["answer"])]
+                )
+            )
+
+    # Add the current question
+    contents.append(
+        types.Content(
+            role="user",
+            parts=[types.Part(text=question)]
+        )
+    )
     for step in range(max_steps):
         # Log what we're sending to Gemini this turn
         prompt_summary = "\n".join(
